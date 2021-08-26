@@ -1,7 +1,0 @@
-keepass:
-  dbfile: Database.kdbx
-  oldentry: test
-  newentry: test2
-  group: home
-  invert-psw: False
-
