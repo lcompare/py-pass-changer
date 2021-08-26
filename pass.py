@@ -42,23 +42,19 @@ class HostStatus:
 
 class Host():
     CONST_PROMPT = r'.*[ ~][\$\#]\s*'
-    CONST_OLDPWPROMPT = r'.*(password|hasło)\s*\:\s*'
-    CONST_NEWPWPROMPT = r'.*(password|hasło)\s*\:\s*'
-    CONST_NEWPWPROMPT2 = r'.*(password|hasło)\s*\:\s*'
-    CONST_SUCCESSMSG = r'.*passwd\:.*(zmienione|successfully).*'
+    CONST_OLDPWPROMPT = r'.*(password)\s*\:\s*'
+    CONST_NEWPWPROMPT = r'.*(password)\s*\:\s*'
+    CONST_NEWPWPROMPT2 = r'.*(password)\s*\:\s*'
+    CONST_SUCCESSMSG = r'.*passwd\:.*(successfully).*'
     updated = []
 
     warnings.filterwarnings("ignore", module='.*paramiko')
 
     def __init__(self, hostname, username, oldpwd, newpwd):
-        revert = True
         self.hostname = hostname
         self.username = username
         self.oldpwd = oldpwd
         self.newpwd = newpwd
-        if revert:
-            self.oldpwd = newpwd
-            self.newpwd = oldpwd
         self.changed = False
         self.log = []
         self.proxy = None
@@ -132,6 +128,7 @@ class KeePass():
             group = cfg['group']
             newentry = cfg['newentry']
             oldentry = cfg['oldentry']
+            invert_psw = cfg['invert_psw']
             if 'keyfile' in cfg:
                 keyfile = cfg['keyfile']
         self.keepass = PyKeePass(dbfile, password=password, keyfile=keyfile)
@@ -140,6 +137,10 @@ class KeePass():
             title=oldentry, group=self.group, first=True)
         self.newentry = self.keepass.find_entries(
             title=newentry, group=self.group, first=True)
+        if invert_psw:
+            aux_psw = self.oldentry.password
+            self.newentry.password = self.oldentry.password
+            self.oldentry.password = aux_psw
 
     def get_hosts(self):
         hosts = self.oldentry.url
