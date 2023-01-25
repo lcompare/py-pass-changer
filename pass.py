@@ -90,16 +90,21 @@ class Host():
                     client, timeout=10, display=False,
                     output_callback=lambda m: self.log_msg(m)) \
                     as interact:
-                interact.expect(Host.CONST_PROMPT)
-                interact.send("passwd")
-                interact.expect(Host.CONST_OLDPWPROMPT)
+                found_index = interact.expect(
+                    [Host.CONST_PROMPT, Host.CONST_OLDPWPROMPT])
+                if found_index == 0:
+                    interact.send("passwd")
+                    interact.expect(Host.CONST_OLDPWPROMPT)
+                
                 interact.send(self.oldpwd)
                 interact.expect(Host.CONST_NEWPWPROMPT)
                 interact.send(self.newpwd)
                 interact.expect(Host.CONST_NEWPWPROMPT2)
                 interact.send(self.newpwd)
-                interact.expect(Host.CONST_SUCCESSMSG)
-                interact.send('exit')
+
+                if found_index == 0:
+                    interact.expect(Host.CONST_SUCCESSMSG)
+                    interact.send('exit')
                 interact.expect()
                 self.changed = True
                 client.close()
