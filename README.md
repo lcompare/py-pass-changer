@@ -1,28 +1,19 @@
 # Python Password Changer
-Python password changer for multiple hosts via ssh (paramiko_expect) by reading a KeePass2 database file.
+Python password changer for multiple hosts via ssh (paramiko_expect).
 
 # Configuration
 Edit **config_pass.yml**:
 ```
-keepass:
-  dbfile: Database.kdbx
-  oldentry: test
-  newentry: test2
-  group: home
+config:
+  username: myname
+  hostsfile: hosts.txt
+  oldpsw: test
+  newpsw: test2
   invert-psw: False
 ```
 
-- **dbfile** is the name of the KeePass2 database file
-- **oldentry** is the name of the entry in KeePass that is going to be read. In this entry you need to have:
-    - **User Name**: user whose password will be modified
-    - **Password:** current password
-    - **URL:** list of hosts separated by a space
-- **newentry** is the name of the entry in KeePass where the result is going to be written. In this entry you need to have:
-    - **User Name:** user whose password will be modified
-    - **Password:** new password
-- **group** is the group name to use in the KeePass database file
-- **invert_psw** True|False if you want to use the oldentry:password as the new password and newentry:password as the old password
-
-# About
-Not originally coded by me, I just modified some things I needed.
-Couln't find who the creator is, if you know please let me know.
+- **username** username to connect to ssh server
+- **hostsfile** list of hosts, 1 per line
+- **oldpsw** current password for all hosts
+- **newpsw** new password you want to set for all hosts
+- **invert_psw** True|False if you want to use the oldpsw as the new password and newpsw as the old password
