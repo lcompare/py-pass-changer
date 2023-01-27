@@ -1,6 +1,6 @@
-keepass:
-  dbfile: Database.kdbx
-  oldentry: test
-  newentry: test2
-  group: home
+config:
+  username: myuser
+  hostsfile: hosts.txt
+  oldpsw: old1
+  newpsw: new1
   invert_psw: False

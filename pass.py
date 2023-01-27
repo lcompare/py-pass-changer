@@ -13,8 +13,6 @@ import yaml
 from colorama import init, Fore
 from paramiko_expect import SSHClientInteraction
 from prettytable import PrettyTable, PLAIN_COLUMNS
-from pykeepass import PyKeePass
-
 
 class HostStatus:
     init()
@@ -50,11 +48,11 @@ class Host():
 
     warnings.filterwarnings("ignore", module='.*paramiko')
 
-    def __init__(self, hostname, username, oldpwd, newpwd):
+    def __init__(self, hostname, username, oldpsw, newpsw):
         self.hostname = hostname
         self.username = username
-        self.oldpwd = oldpwd
-        self.newpwd = newpwd
+        self.oldpsw = oldpsw
+        self.newpsw = newpsw
         self.changed = False
         self.log = []
         self.proxy = None
@@ -70,8 +68,10 @@ class Host():
     def log_msg(self, message):
         self.log.append(message)
 
-    def change_pwd(self, verbose):
+    def change_psw(self, verbose):
         try:
+            if verbose:
+                print(f"connecting to {self.hostname}...")
             # Create a new SSH client object
             client = paramiko.SSHClient()
 
@@ -84,7 +84,10 @@ class Host():
             if self.proxy is not None:
                 proxy = paramiko.ProxyCommand(self.proxy)
             client.connect(hostname=self.hostname, timeout=20, sock=proxy,
-                           username=self.username, password=self.oldpwd)
+                           username=self.username, password=self.oldpsw)
+
+            if verbose:
+                print(f"connected to {self.hostname}")
 
             with SSHClientInteraction(
                     client, timeout=10, display=False,
@@ -96,11 +99,11 @@ class Host():
                     interact.send("passwd")
                     interact.expect(Host.CONST_OLDPWPROMPT)
                 
-                interact.send(self.oldpwd)
+                interact.send(self.oldpsw)
                 interact.expect(Host.CONST_NEWPWPROMPT)
-                interact.send(self.newpwd)
+                interact.send(self.newpsw)
                 interact.expect(Host.CONST_NEWPWPROMPT2)
-                interact.send(self.newpwd)
+                interact.send(self.newpsw)
 
                 if found_index == 0:
                     interact.expect(Host.CONST_SUCCESSMSG)
@@ -123,58 +126,32 @@ class Host():
             if not self.changed:
                 print(self.log)
 
-
-class KeePass():
-    def __init__(self, password, cfgfile='pass.yml'):
-        keyfile = None
+class Config():
+    def __init__(self, cfgfile='config_pass.yml'):
         with open(cfgfile, 'r') as ymlfile:
-            cfg = yaml.safe_load(ymlfile)['keepass']
-            dbfile = cfg['dbfile']
-            group = cfg['group']
-            newentry = cfg['newentry']
-            oldentry = cfg['oldentry']
+            cfg = yaml.safe_load(ymlfile)['config']
+            self.username = cfg['username']
+            self.oldpsw = cfg['oldpsw']
+            self.newpsw = cfg['newpsw']
             invert_psw = cfg['invert_psw']
-            if 'keyfile' in cfg:
-                keyfile = cfg['keyfile']
-        self.keepass = PyKeePass(dbfile, password=password, keyfile=keyfile)
-        self.group = self.keepass.find_groups(name=group, first=True)
-        self.oldentry = self.keepass.find_entries(
-            title=oldentry, group=self.group, first=True)
-        self.newentry = self.keepass.find_entries(
-            title=newentry, group=self.group, first=True)
+        
         if invert_psw:
-            aux_psw = self.oldentry.password
-            self.newentry.password = self.oldentry.password
-            self.oldentry.password = aux_psw
+            aux_psw = newpsw
+            newpsw = oldpsw
+            oldpsw = aux_psw
 
     def get_hosts(self):
-        hosts = self.oldentry.url
         ret = []
-        for host in re.split(r'\s+', hosts):
-            ret.append(Host(
-                host, self.newentry.username, self.oldentry.password,
-                self.newentry.password))
+        with open("hosts.txt") as file:
+            for host in file:
+                ret.append(Host(host.rstrip(), self.username, self.oldpsw, self.newpsw))
+
         return ret
-
-    def add_to_url(self, host):
-        if self.newentry.url is not None:
-            self.newentry.url = self.newentry.url + ' ' + host
-        else:
-            self.newentry.url = host
-        self.keepass.save()
-
-    def add_to_notes(self, msg):
-        if self.newentry.notes is not None:
-            self.newentry.notes = self.newentry.notes + '\n' + msg
-        else:
-            self.newentry.notes = msg
-        self.keepass.save()
 
 def main():
     parser = argparse.ArgumentParser(description='Changes password on multiple hosts.')
     parser.add_argument('-f', '--file', nargs=1, help='Path to file with configuration.')
-    parser.add_argument('-v', '--verbose', action='store_const', const=True, \
-                        help='Verbose output.')
+    parser.add_argument('-v', '--verbose', action='store_const', const=True, help='Verbose output.')
     args = parser.parse_args()
     cfgfilename = 'config_pass.yml'
     if args.file:
@@ -183,15 +160,10 @@ def main():
     verbose = False
     if args.verbose:
         verbose = True
-    password = getpass.getpass(prompt='KeePass2 Password: ')
 
-    keepass = KeePass(password, cfgfile=cfgfilename)
-    for host in keepass.get_hosts():
-        host.change_pwd(verbose)
-        if host.changed:
-            keepass.add_to_url(host.hostname)
-        else:
-            keepass.add_to_notes(host.hostname + '\n' + '\n'.join(host.log))
+    config = Config(cfgfile=cfgfilename)
+    for host in config.get_hosts():
+        host.change_psw(verbose)
 
     table = PrettyTable()
     table.field_names = ["hostname", "status"]
@@ -202,7 +174,6 @@ def main():
         table.add_row(host.return_status())
 
     print(table)
-
 
 if __name__ == '__main__':
     main()
