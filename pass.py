@@ -186,6 +186,7 @@ class Config():
         with open(cfgfile, 'r') as ymlfile:
             cfg = yaml.safe_load(ymlfile)['config']
             self.username = cfg['username']
+            self.hostsfile = cfg['hostsfile']
             self.oldpsw = cfg['oldpsw']
             self.newpsw = cfg['newpsw']
             invert_psw = cfg['invert_psw']
@@ -197,7 +198,7 @@ class Config():
 
     def get_hosts(self):
         ret = []
-        with open("hosts.txt") as file:
+        with open(self.hostsfile) as file:
             for host in file:
                 ret.append(Host(host.rstrip(), self.username, self.oldpsw, self.newpsw))
 
@@ -217,7 +218,9 @@ def main():
     verbose = False
     if args.verbose:
         verbose = True
-
+    if args.testconn: 
+        print('**testing connectivity to hosts**')
+        
     config = Config(cfgfile=cfgfilename)
     for host in config.get_hosts():
         if args.testconn:
