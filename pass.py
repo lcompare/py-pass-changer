@@ -104,9 +104,9 @@ class Host():
                     print(output)
                 else:
                     print("There was no output for this command")
-                self.changed = True
-                client.close()
                 print("connection closed")
+            self.changed = True
+            client.close()
 
         except Exception:
             self.log_msg(traceback.format_exc())
@@ -208,6 +208,7 @@ def main():
     parser.add_argument('-f', '--file', nargs=1, help='Path to file with configuration.')
     parser.add_argument('-v', '--verbose', action='store_const', const=True, help='Verbose output.')
     parser.add_argument('-t', '--testconn', action='store_const', const=True, help='Test connection to host')
+    parser.add_argument('-e', '--export', action='store_const', const=True, help='Export report of successul and failed hosts')
     args = parser.parse_args()
     cfgfilename = 'config_pass.yml'
     if args.file:
@@ -228,6 +229,15 @@ def main():
     table.field_names = ["hostname", "status"]
     table.set_style(PLAIN_COLUMNS)
     table.align = "l"
+
+    if args.export:
+        with open("hosts_ok.txt", "w") as hosts_ok:
+            with open("hosts_fail.txt", "w") as hosts_fail:
+                for host in Host.updated:
+                    if host.status:
+                        hosts_ok.write(host.hostname + '\n')
+                    else:
+                        hosts_fail.write(host.hostname + '\n')
 
     for host in Host.updated:
         table.add_row(host.return_status())
