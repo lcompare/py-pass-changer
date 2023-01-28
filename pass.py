@@ -208,8 +208,8 @@ def main():
     parser = argparse.ArgumentParser(description='Changes password on multiple hosts.')
     parser.add_argument('-f', '--file', nargs=1, help='Path to file with configuration.')
     parser.add_argument('-v', '--verbose', action='store_const', const=True, help='Verbose output.')
-    parser.add_argument('-t', '--testconn', action='store_const', const=True, help='Test connection to host')
-    parser.add_argument('-e', '--export', action='store_const', const=True, help='Export report of successul and failed hosts')
+    parser.add_argument('-t', '--testconn', action='store_const', const=True, help='Test connection to hosts')
+    parser.add_argument('-e', '--export', action='store_const', const=True, help='Export report of successul and failed hosts.')
     args = parser.parse_args()
     cfgfilename = 'config_pass.yml'
     if args.file:
@@ -218,7 +218,7 @@ def main():
     verbose = False
     if args.verbose:
         verbose = True
-    if args.testconn: 
+    if args.testconn:
         print(Fore.YELLOW + '** testing connectivity to hosts **' + Fore.WHITE)
 
     config = Config(cfgfile=cfgfilename)
