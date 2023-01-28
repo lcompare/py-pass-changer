@@ -17,15 +17,19 @@ from prettytable import PrettyTable, PLAIN_COLUMNS
 class HostStatus:
     init()
 
-    def __init__(self, hostname, status):
+    def __init__(self, hostname, status, testconn):
         self.hostname = hostname
         self.status = status
+        self.testconn = testconn
 
     def return_status(self):
         end = Fore.WHITE
         if self.status:
             color = Fore.GREEN
-            status = 'changed'
+            if self.testconn:
+                status = 'ok'
+            else:
+                status = 'changed'
         else:
             color = Fore.RED
             status = 'failed'
@@ -67,6 +71,57 @@ class Host():
 
     def log_msg(self, message):
         self.log.append(message)
+
+    def test_connection(self, verbose):
+        try:
+            if verbose:
+                print(f"connecting to {self.hostname}...")
+            # Create a new SSH client object
+            client = paramiko.SSHClient()
+
+            # Set SSH key parameters to auto accept unknown hosts
+            client.load_system_host_keys()
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+            # Connect to the host
+            proxy = None
+            if self.proxy is not None:
+                proxy = paramiko.ProxyCommand(self.proxy)
+            client.connect(hostname=self.hostname, timeout=20, sock=proxy,
+                           username=self.username, password=self.oldpsw)
+
+            output=""
+            command = "hostname"
+            stdin, stdout, stderr = client.exec_command(command)
+            if verbose:
+                print("succuessfully connected")
+                stdout=stdout.readlines()
+                print(command)
+                for line in stdout:
+                    if line != "": 
+                        output=output+line.rstrip()
+                if output != "":
+                    print(output)
+                else:
+                    print("There was no output for this command")
+                self.changed = True
+                client.close()
+                print("connection closed")
+
+        except Exception:
+            self.log_msg(traceback.format_exc())
+        finally:
+            try:
+                client.close()
+            except Exception:
+                pass
+        status = HostStatus(self.hostname, self.changed, True)
+        Host.updated.append(status)
+        if verbose:
+            status.print_status()
+            if not self.changed:
+                print(self.log)
+            print("--------------------------------------------------------------------")
 
     def change_psw(self, verbose):
         try:
@@ -119,7 +174,7 @@ class Host():
                 client.close()
             except Exception:
                 pass
-        status = HostStatus(self.hostname, self.changed)
+        status = HostStatus(self.hostname, self.changed, False)
         Host.updated.append(status)
         if verbose:
             status.print_status()
@@ -152,6 +207,7 @@ def main():
     parser = argparse.ArgumentParser(description='Changes password on multiple hosts.')
     parser.add_argument('-f', '--file', nargs=1, help='Path to file with configuration.')
     parser.add_argument('-v', '--verbose', action='store_const', const=True, help='Verbose output.')
+    parser.add_argument('-t', '--testconn', action='store_const', const=True, help='Test connection to host')
     args = parser.parse_args()
     cfgfilename = 'config_pass.yml'
     if args.file:
@@ -163,7 +219,10 @@ def main():
 
     config = Config(cfgfile=cfgfilename)
     for host in config.get_hosts():
-        host.change_psw(verbose)
+        if args.testconn:
+            host.test_connection(verbose)
+        else:
+            host.change_psw(verbose)
 
     table = PrettyTable()
     table.field_names = ["hostname", "status"]
