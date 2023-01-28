@@ -219,8 +219,8 @@ def main():
     if args.verbose:
         verbose = True
     if args.testconn: 
-        print('**testing connectivity to hosts**')
-        
+        print(Fore.YELLOW + '** testing connectivity to hosts **' + Fore.WHITE)
+
     config = Config(cfgfile=cfgfilename)
     for host in config.get_hosts():
         if args.testconn:
